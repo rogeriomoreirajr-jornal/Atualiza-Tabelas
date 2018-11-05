@@ -16,13 +16,12 @@ import unicodedata
 import os
 from time import sleep
 
-## os.environ["REQUESTS_CA_BUNDLE"] = r"S:\# Rob\xf4s\Tabelas\# script\cacert.pem"
-os.chdir('\\\\172.20.0.45\\jornalismo novo\\# Robôs\Tabelas\# script')
+os.chdir('\\\\172.20.0.45\\jornalismo novo\\# Rob\xf4s\Tabelas\# script')
 os.environ["REQUESTS_CA_BUNDLE"] = r"cacert.pem"
 s = requests.Session()
 senha = open(u'\\\\172.20.0.45\\jornalismo novo\_Utilit\xe1rios\password.txt').read()
 
-pat = 'https://api.globoesporte.globo.com/tabela/{uuid}/fase/{fase}/rodada/{rodada}/jogos/'.format
+pat_rod = 'https://api.globoesporte.globo.com/tabela/{uuid}/fase/{fase}/rodada/{rodada}/jogos/'.format
 
 
 proxy = ({
@@ -92,28 +91,28 @@ class Formula1():
 		}
 
 	dict_countries_race = {
-	u'Australia':u'da Austrália',
+	u'Australia':u'da AustrÃ¡lia',
 	u'China':'da China',
 	u'Bahrain':'do Bahrein',
-	u'Russia':u'da Rússia',
+	u'Russia':u'da RÃºssia',
 	u'Spain':'da Espanha',
-	u'Monaco':u'de Mônaco',
-	u'Canada':u'do Canadá',
-	u'Azerbaijan':u'do Azerbaijão',
-	u'Austria':u'da Aústria',
+	u'Monaco':u'de MÃ´naco',
+	u'Canada':u'do CanadÃ¡',
+	u'Azerbaijan':u'do AzerbaijÃ£o',
+	u'Austria':u'da AÃºstria',
 	u'UK':'do Reino Unido',
 	u'Hungary':'da Hungria',
-	u'Belgium':u'da Bélgica',
-	u'Italy':u'da Itália',
+	u'Belgium':u'da BÃ©lgica',
+	u'Italy':u'da ItÃ¡lia',
 	u'Singapore':'da Cingapura',
-	u'Malaysia':u'da Malásia',
-	u'Japan':u'do Japão',
+	u'Malaysia':u'da MalÃ¡sia',
+	u'Japan':u'do JapÃ£o',
 	u'USA':'dos Estados Unidos',
-	u'Mexico':u'do México',
+	u'Mexico':u'do MÃ©xico',
 	u'Brazil':'do Brasil',
 	u'UAE':'do Dubai',
 	u'Germany':'da Alemanha',
-	u'France':u'da França'
+	u'France':u'da FranÃ§a'
 	}
 
 	def corrida(self):
@@ -145,7 +144,7 @@ class Formula1():
 			else:
 				list_unfinished.append((' ').join([piloto.driver.givenname.text, piloto.driver.familyname.text]))
 
-		unfinished = (' e ').join([(', ').join(list_unfinished)[:-1], list_unfinished[-1]]) + u' não finalizaram a corrida'
+		unfinished = (' e ').join([(', ').join(list_unfinished)[:-1], list_unfinished[-1]]) + u' nÃ£o finalizaram a corrida'
 
 		etree.SubElement(self.parent_xml, 'corrida').text = string_atual[:-1]
 		etree.SubElement(self.parent_xml, 'unfinished').text = unfinished
@@ -180,38 +179,42 @@ class Campeonato():
 			print 'Checando... {}'.format(campeonato),
 
 		self.soup = make_soup(campeonatos[campeonato])
+		self.script = self.soup.find('script',{'id':'scriptReact'}).get_text()
+		self.uuid, = re.search('tUUID: "([^"]+)"', self.script).groups()
+		self.fase, = re.search('"slug":"([^"]+)"', self.script).groups()
+
+		self.url_tab = 'https://api.globoesporte.globo.com/tabela/{uuid}/fase/{fase}/classificacao/'.format(**self.__dict__)
+
 		self.not_finished = 0
 		order = True
 
-		nome_campeonato = self.soup.find('div', 'header-title-content').text
+		self.type, = re.search('{"descricao":"([^"]+)"', self.script).groups()
 
-		if self.soup.find('span', 'tabela-navegacao-seletor-ativo'):
-			fase = self.soup.find('span', 'tabela-navegacao-seletor-ativo').text
-		elif self.soup.find('aside', 'lista-de-jogos'):
-			self.rodada = self.soup.find('aside', 'lista-de-jogos')['data-rodada-atual']
-			fase = self.rodada+'ª rodada'
+		nome_campeonato = self.soup.find('div', 'header-title-content').text
 		etree.SubElement(self.parent_xml,'nome_campeonato').text = self.title(nome_campeonato)
 
 		"""
-		A ideia aqui é conseguir o soup do objeto (o que vai ajudar em alguns casos)
+		A ideia aqui Ã© conseguir o soup do objeto (o que vai ajudar em alguns casos)
 		e definir em que tipo ele entra:
 			- Mata a mata normal (jogos no soup)
-			- Campeonato com grupos (não sei)
+			- Campeonato com grupos (nÃ£o sei)
 		"""
 
-		if self.soup.find('article','pontos-corridos'):
+
+		if self.type == 'Pontos Corridos':
+			self.rodada, = re.search('"rodada":{"atual":(\d+),', self.script).groups()
+
 			"""
 			Campeonato normal
-			(tabela no soup, jogos no json, atenção para Série B)
+			(tabela no soup, jogos no json, atenÃ§Ã£o para SÃ©rie B)
 			"""
-			self.type = 'pontos corridos'
-			self.parse_table(soup = self.soup)
+			self.parse_table_json()
 			weekday = datetime.today().weekday()
 			self.parse_rodada_json()
 
 
-		elif self.soup.find('article','mata-mata'):
-			self.type = 'mata-mata'
+		elif self.type == 'Dois Jogos':
+##			self.rodada, = re.search('"rodada":{"atual":(\d+),', self.script).groups()
 			self.fase = self.soup.find('span', 'tabela-navegacao-seletor-ativo').text
 
 			jogos_ida = []
@@ -240,35 +243,32 @@ class Campeonato():
 
 
 
-		elif self.soup.find('article','pontos-corridos-grupado'):
-			global c
-			c = self.soup
-			global grupo
-			self.type = 'pontos-corridos-grupado'
+		elif self.type == 'Pontos Corridos Grupado':
+			grupos_raw, = re.search('const grupos_fase = (\[[^\n]+\]);', self.script).groups()
+			grupos = grupos = json.loads(grupos_raw)
+			for grupo in grupos:
+				self.rodada = grupo['rodada']
 
-			for grupo in self.soup.article.findAll('section'):
-				self.rodada = grupo.find('aside', 'lista-de-jogos')['data-rodada-atual']
-				self.grupo_nome = grupo.find('h2','tabela-header-titulo').text
-				nome = tag(re.search(' *(.+) *', grupo.header.text).groups()[0])
-				parent_grupo = etree.SubElement(self.parent_xml, nome)
-				etree.SubElement(parent_grupo, 'nome').text = re.search(' *(.+) *', grupo.header.text).groups()[0]
+				grupo_nome = grupo['nome_grupo']
+				parent_grupo = etree.SubElement(self.parent_xml, tag(grupo_nome))
+				etree.SubElement(parent_grupo, 'nome').text = grupo_nome
 
-				self.parse_table(soup = grupo, output = parent_grupo)
-				self.parse_rodada_json(parent = parent_grupo)
+				self.parse_table_json(parent = parent_grupo, json_raw = grupo)
+				self.parse_rodada_json(parent = parent_grupo, json_raw = grupo)
 
 		if not debug: print 'ok'
 
 
 	def title(self, string):
 		lista_re = {
-			u'brasileir\xe3o s\xe9rie a':u'brasileirão',
+			u'brasileir\xe3o s\xe9rie a':u'brasileirÃ£o',
 			u'brasileir\xe3o s\xe9rie b':u'segundona',
-			u'brasileir\xe3o s\xe9rie c':u'série c',
-            u'brasileir\xe3o s\xe9rie d':u'série d',
-			u'brasileir\xe3o s\xe9rie a'.title():u'brasileirão',
+			u'brasileir\xe3o s\xe9rie c':u'sÃ©rie c',
+            u'brasileir\xe3o s\xe9rie d':u'sÃ©rie d',
+			u'brasileir\xe3o s\xe9rie a'.title():u'brasileirÃ£o',
 			u'brasileir\xe3o s\xe9rie b'.title():u'segundona',
-			u'brasileir\xe3o s\xe9rie c'.title():u'série c',
-            u'brasileir\xe3o s\xe9rie d'.title():u'série d',
+			u'brasileir\xe3o s\xe9rie c'.title():u'sÃ©rie c',
+            u'brasileir\xe3o s\xe9rie d'.title():u'sÃ©rie d',
             u'^ +':'',
             u' $':''
 		}
@@ -283,9 +283,9 @@ class Campeonato():
 		if parent_xml==None: parent_xml = self.parent_xml
 
 		if self.not_finished == 1:
-			etree.SubElement(parent_xml,'not_finished').text = u'*Não finalizado até o fechamento desta edição'
+			etree.SubElement(parent_xml,'not_finished').text = u'*NÃ£o finalizado atÃ© o fechamento desta ediÃ§Ã£o'
 		elif self.not_finished > 1:
-			etree.SubElement(parent_xml,'not_finished').text = u'*Não finalizados até o fechamento desta edição'
+			etree.SubElement(parent_xml,'not_finished').text = u'*NÃ£o finalizados atÃ© o fechamento desta ediÃ§Ã£o'
 		else:
 			etree.SubElement(parent_xml,'not_finished').text = u''
 
@@ -342,23 +342,39 @@ class Campeonato():
 
 		output.text = '\n'.join([el for el in ['\t'.join(el) for el in tab]])
 
+	def parse_table_json(self, parent = None, json_raw=None):
+		global json_tab, equipe
 
-	def parse_rodada_json(self, parent = None,):
+		if parent==None: parent=self.parent_xml
+
+		output = etree.SubElement(parent,'tabela')
+
+		if json_raw:
+			json_tab = json_raw['classificacao']
+		else:
+			json_tab = json.loads(make_soup(self.url_tab).text)['classificacao']
+
+		linhas = []
+
+		for equipe in json_tab:
+			atts = ['nome_popular','pontos','jogos','vitorias','empates','derrotas','gols_pro','gols_contra','saldo_gols','aproveitamento']
+			linhas.append('\t'.join([unicode(equipe[k]) for k in atts]))
+
+		output.text = '\n'.join(linhas)
+
+
+	def parse_rodada_json(self, parent = None, json_raw=None):
 		"""
 		Abrir o json, retornar uma string formatada
 		"""
-		global jogo, json_, soup
+		global rodada
+		if parent==None: parent=self.parent_xml
 
-		soup = self.soup
-
-		re_json = re.compile('const tUUID = "([^"]+)";?\n +const fase = "([^"]+)"').search
-		uuid, fase = re_json(self.soup.find('script',{'id':'scriptReact'}).get_text()).groups()
 		json_ = None
 
-		if parent == None: parent=self.parent_xml
 
 		"""
-		Preciso usar o json do site, não do call
+		Preciso usar o json do site, nÃ£o do call
 		"""
 
 		if self.nome in [u'brasileiro serie b',]:
@@ -366,50 +382,55 @@ class Campeonato():
 		else:
 			r = [0,1]
 
-		if self.type == 'pontos-corridos-grupado':
-			json_re = re.compile(r"const grupos_fase = (.+)\n").search
-			json_raw =  json.loads(json_re(self.soup.find('script',{'id':'scriptReact'}).text).groups()[0][:-1])
-			json_ = [el for el in json_raw if el['nome_grupo']==self.grupo_nome][0]['lista_jogos']
+		if self.type == 'Pontos Corridos Grupado':
+			rodada = self.rodada['atual']
+			json_ = json_raw['lista_jogos']
 			r = [0]
 
 		for modifier in r:
-			rodada = int(self.rodada)+modifier
-			if not self.type == 'pontos-corridos-grupado':
-				url_json = pat(uuid=uuid, fase=fase, rodada=rodada)
-				json_ = json.loads(make_soup(url_json).text)
+				if self.type != 'Pontos Corridos Grupado':
+					rodada = int(self.rodada)+modifier
+					url_json = pat_rod(uuid=self.uuid, fase=self.fase, rodada=rodada)
+					json_ = json.loads(make_soup(url_json).text)
 
-			output = etree.SubElement(parent,'rodada')
-			etree.SubElement(output,'cartola').text = u'{}ª rodada'.format(rodada)
+				output = etree.SubElement(parent,'rodada')
 
-			l_jogos = []
+				l_jogos = []
 
-			for jogo in json_:
-##				if self.type == 'pontos-corridos-grupado': jogo = jogo
-				d = datetime.strptime(jogo['data_realizacao'],'%Y-%m-%dT%H:%M').strftime('%d/%m')
-				h = datetime.strptime(jogo['hora_realizacao'],'%H:%M').strftime('%Hh%M')
-				m = jogo['equipes']['mandante']['nome_popular']
-				mp = jogo['placar_oficial_mandante']
-				if mp == None: mp=''
+				for jogo in json_:
+	##				if self.type == 'pontos-corridos-grupado': jogo = jogo
+					d_raw = jogo['data_realizacao']
+					if d_raw: d = datetime.strptime(d_raw,'%Y-%m-%dT%H:%M').strftime('%d/%m')
+					else: d=''
 
-				vp = jogo['placar_oficial_visitante']
-				if vp == None: vp=''
+					h_raw = jogo['hora_realizacao']
+					if h_raw: h = datetime.strptime(h_raw,'%H:%M').strftime('%Hh%M')
+					else: h = ''
 
-				v = jogo['equipes']['visitante']['nome_popular']
+					m = jogo['equipes']['mandante']['nome_popular']
+					mp = jogo['placar_oficial_mandante']
+					if mp == None: mp=''
 
-				if jogo['placar_penaltis_mandante']:
-					mpp = jogo['placar_penaltis_mandante']
-					vpp = jogo['placar_penaltis_visitante']
+					vp = jogo['placar_oficial_visitante']
+					if vp == None: vp=''
 
-					dados = [d,h,m,mp,mpp,vpp,vp,v]
-					linha = u'{}{}, {}\t{}\t{} ({} x {}) {}\t{}'.format(*dados)
+					v = jogo['equipes']['visitante']['nome_popular']
 
-				else:
-					dados = [d,h,m,mp,vp,v]
-					linha = u'{}, {}\t{}\t{} x {}\t{}'.format(*dados)
+					if jogo['placar_penaltis_mandante']:
+						mpp = jogo['placar_penaltis_mandante']
+						vpp = jogo['placar_penaltis_visitante']
 
-				l_jogos.append(linha)
+						dados = [d,h,m,mp,mpp,vpp,vp,v]
+						linha = u'{}{}, {}\t{}\t{} ({} x {}) {}\t{}'.format(*dados)
 
-			etree.SubElement(output,'jogos').text = '\n'.join(l_jogos)
+					else:
+						dados = [d,h,m,mp,vp,v]
+						linha = u'{}, {}\t{}\t{} x {}\t{}'.format(*dados)
+
+					l_jogos.append(linha)
+
+				etree.SubElement(output,'cartola').text = u'{}Âª rodada'.format(rodada)
+				etree.SubElement(output,'jogos').text = '\n'.join(l_jogos)
 
 
 	def parse_rodada(self, output = '', soup = None):
@@ -447,7 +468,7 @@ class Campeonato():
 			for jogo in jogos:
 				l_jogos.append(self.parse_jogo(jogo))
 
-			etree.SubElement(output,'cartola').text = u'{}ª rodada'.format(rodada)
+			etree.SubElement(output,'cartola').text = u'{} rodada'.format(rodada)
 			etree.SubElement(output,'jogos').text = '\n'.join(l_jogos)
 
 			self.unfinish(parent_xml=output)
@@ -503,7 +524,7 @@ class Campeonato():
 
 		rod = int(self.rodada)
 
-		# Todas as datas são posteriores a hoje? Hoje é domingo?
+		# Todas as datas sÃ£o posteriores a hoje? Hoje Ã© domingo?
 
 		hoje  = datetime.today() - timedelta(hours=4)
 
@@ -520,7 +541,7 @@ tab = ''
 
 root = etree.Element("root")
 stringre = open('dicionario.txt').read()
-listare = re.findall('([^\t\n]+)\t([^\t\n]+)', stringre)
+listare = re.findall('([^\t\n]+)\t([^\t\n]*)\n', stringre)
 
 listare.extend([['\r0','\n'],
 	[', \t','\t'],
@@ -532,7 +553,6 @@ listare.extend([['\r0','\n'],
 
 
 def limpa_times(text):
-
 	for pat, repl in listare:
 		text = re.sub(pat, repl, text, flags=re.MULTILINE | re.UNICODE)
 	return text
@@ -544,7 +564,7 @@ def reset():
 
 def write(output):
 	open(caminho, 'w').write(output)
-	print "\n\nTudo certo. Abra os arquivos para atualizá-los."
+	print "\n\nTudo certo. Abra os arquivos para atualizÃ¡-los."
 
 
 def master(debug = False):
@@ -582,15 +602,15 @@ def write(filename=''):
 	filename='resultados'
 	open('{}.xml'.format(filename), 'w').write(output)
 
-	print "\n\nTudo certo. Abra os arquivos para atualizá-los."
+	print "\n\nTudo certo. Abra os arquivos para atualizÃ¡-los."
 
 	raw_input()
 
-c = Campeonato('brasileiro')
+##self = Campeonato('brasileiro')
+##self = Campeonato('libertadores')
 ##
 ##view()
 
-##if __name__ == '__main__':
-##	master()
-##	write()
-##	view()
+if __name__ == '__main__':
+	master()
+	write()
