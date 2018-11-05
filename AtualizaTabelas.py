@@ -91,28 +91,28 @@ class Formula1():
 		}
 
 	dict_countries_race = {
-	u'Australia':u'da Austrália',
+	u'Australia':'da Austrália'.decode('utf8'),
 	u'China':'da China',
 	u'Bahrain':'do Bahrein',
-	u'Russia':u'da Rússia',
+	u'Russia':'da Rússia'.decode('utf8'),
 	u'Spain':'da Espanha',
-	u'Monaco':u'de Mônaco',
-	u'Canada':u'do Canadá',
-	u'Azerbaijan':u'do Azerbaijão',
-	u'Austria':u'da Aústria',
+	u'Monaco':'de Mônaco'.decode('utf8'),
+	u'Canada':'do Canadá'.decode('utf8'),
+	u'Azerbaijan':'do Azerbaijão'.decode('utf8'),
+	u'Austria':'da Aústria'.decode('utf8'),
 	u'UK':'do Reino Unido',
 	u'Hungary':'da Hungria',
-	u'Belgium':u'da Bélgica',
-	u'Italy':u'da Itália',
+	u'Belgium':'da Bélgica'.decode('utf8'),
+	u'Italy':'da Itália'.decode('utf8'),
 	u'Singapore':'da Cingapura',
-	u'Malaysia':u'da Malásia',
-	u'Japan':u'do Japão',
+	u'Malaysia':'da Malásia'.decode('utf8'),
+	u'Japan':'do Japão'.decode('utf8'),
 	u'USA':'dos Estados Unidos',
-	u'Mexico':u'do México',
+	u'Mexico':'do México'.decode('utf8'),
 	u'Brazil':'do Brasil',
 	u'UAE':'do Dubai',
 	u'Germany':'da Alemanha',
-	u'France':u'da França'
+	u'France':'da França'.decode('utf8'),
 	}
 
 	def corrida(self):
@@ -144,7 +144,7 @@ class Formula1():
 			else:
 				list_unfinished.append((' ').join([piloto.driver.givenname.text, piloto.driver.familyname.text]))
 
-		unfinished = (' e ').join([(', ').join(list_unfinished)[:-1], list_unfinished[-1]]) + u' não finalizaram a corrida'
+		unfinished = (' e ').join([(', ').join(list_unfinished)[:-1], list_unfinished[-1]]) + ' não finalizaram a corrida'.decode('utf8')
 
 		etree.SubElement(self.parent_xml, 'corrida').text = string_atual[:-1]
 		etree.SubElement(self.parent_xml, 'unfinished').text = unfinished
